@@ -130,9 +130,9 @@ public class OverlayService extends Service {
         params.x = bubbleParams.x - size / 3;
         params.y = bubbleParams.y - size / 3;
 
-        pieMenu.setOnItemSelected(new PieMenuView.OnItemSelectedListener() {
+        pieMenu.setOnItemSelected(new PieMenuView.OnItemSelected() {
             @Override
-            public void onItemSelected(int index) {
+            public void onSelected(int index) {
                 handlePieAction(index);
                 removePieMenu();
             }
@@ -153,7 +153,6 @@ public class OverlayService extends Service {
         switch (index) {
             case 0: // Copy
                 if (svc != null && svc.copySelectedText()) {
-                    // baca hasil copy dari clipboard sistem, simpan ke db
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = cm.getPrimaryClip();
                     if (clip != null && clip.getItemCount() > 0) {
