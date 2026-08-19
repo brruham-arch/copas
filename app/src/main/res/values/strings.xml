@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyCopas</string>
+    <string name="accessibility_service_desc">Dibutuhkan agar MyCopas bisa deteksi teks yang diselect dan lakukan copy/paste di aplikasi lain.</string>
+    <string name="hello_world">Hello world!</string>
+</resources>
