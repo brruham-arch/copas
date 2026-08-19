@@ -21,9 +21,10 @@ import android.widget.Toast;
 
 // script_name: OverlayService
 // author: brruham
-// version: 1.0
+// version: 1.1
 // Bubble melayang (draggable) + saat tap, muncul pie menu radial
 // dengan opsi Copy / Paste / Riwayat / Tutup.
+// Tap singkat = buka pie menu. Tekan lama (>=500ms) = tutup overlay.
 public class OverlayService extends Service {
 
     private WindowManager wm;
@@ -33,6 +34,7 @@ public class OverlayService extends Service {
     private WindowManager.LayoutParams bubbleParams;
 
     private static final String CHANNEL_ID = "mycopas_channel";
+    private static final long LONG_PRESS_MS = 500;
 
     @Override
     public void onCreate() {
@@ -82,6 +84,7 @@ public class OverlayService extends Service {
         bubble.setOnTouchListener(new View.OnTouchListener() {
             float initialX, initialY, touchX, touchY;
             boolean dragged = false;
+            long downTime;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -92,6 +95,7 @@ public class OverlayService extends Service {
                         touchX = event.getRawX();
                         touchY = event.getRawY();
                         dragged = false;
+                        downTime = System.currentTimeMillis();
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         float dx = event.getRawX() - touchX;
@@ -102,7 +106,15 @@ public class OverlayService extends Service {
                         wm.updateViewLayout(bubble, bubbleParams);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (!dragged) showPieMenu();
+                        long duration = System.currentTimeMillis() - downTime;
+                        if (!dragged) {
+                            if (duration >= LONG_PRESS_MS) {
+                                Toast.makeText(OverlayService.this, "Menutup overlay...", Toast.LENGTH_SHORT).show();
+                                stopSelf();
+                            } else {
+                                showPieMenu();
+                            }
+                        }
                         return true;
                 }
                 return false;
@@ -171,7 +183,9 @@ public class OverlayService extends Service {
                 if (clip != null && clip.getItemCount() > 0 && svc != null) {
                     String text = clip.getItemAt(0).coerceToText(this).toString();
                     boolean ok = svc.pasteText(text);
-                    Toast.makeText(this, ok ? "Pasted" : "Gagal paste (field tidak editable?)", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, ok ? "Pasted" : "Gagal paste (field tidak mendukung)", Toast.LENGTH_SHORT).show();
+                } else if (svc == null) {
+                    Toast.makeText(this, "Accessibility service belum aktif", Toast.LENGTH_SHORT).show();
                 }
                 break;
             case 2: // Riwayat -> buka MainActivity list riwayat
@@ -180,8 +194,7 @@ public class OverlayService extends Service {
                 i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(i);
                 break;
-            case 3: // Tutup overlay
-                stopSelf();
+            case 3: // Tutup menu saja (menu otomatis ditutup oleh caller setelah ini)
                 break;
         }
     }

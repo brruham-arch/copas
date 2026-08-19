@@ -5,15 +5,18 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 // script_name: ClipAccessibilityService
 // author: brruham
-// version: 1.0
+// version: 1.1
 // Service ini tetap hidup di background (tidak kena batasan clipboard Android 10+)
 // dan bisa performAction(ACTION_COPY / ACTION_PASTE) langsung ke node target
-// tanpa perlu simulasi gesture.
+// tanpa perlu simulasi gesture. Kalau ACTION_PASTE tidak didukung field target
+// (banyak EditText custom seperti WhatsApp/Instagram tidak implement ini),
+// fallback ke ACTION_SET_TEXT yang replace seluruh isi field.
 public class ClipAccessibilityService extends AccessibilityService {
 
     private static ClipAccessibilityService instance;
@@ -27,7 +30,6 @@ public class ClipAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
-        // start overlay service otomatis begitu accessibility aktif
         startForegroundService(new Intent(this, OverlayService.class));
     }
 
@@ -51,7 +53,6 @@ public class ClipAccessibilityService extends AccessibilityService {
     public boolean copySelectedText() {
         if (lastFocusedNode == null) return false;
         lastFocusedNode.refresh();
-        // kalau ada text yang ter-select, ACTION_COPY akan copy selection-nya
         return lastFocusedNode.performAction(AccessibilityNodeInfo.ACTION_COPY);
     }
 
@@ -63,6 +64,15 @@ public class ClipAccessibilityService extends AccessibilityService {
 
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText("mycopas", content));
-        return lastFocusedNode.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+
+        boolean ok = lastFocusedNode.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+        if (ok) return true;
+
+        // fallback: banyak field tidak implement ACTION_PASTE,
+        // langsung set isi field pakai ACTION_SET_TEXT
+        Bundle args = new Bundle();
+        args.putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, content);
+        return lastFocusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
     }
 }
